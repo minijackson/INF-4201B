@@ -22,11 +22,17 @@ defmodule Server.Preamble do
   defp try_listen([], index), do: :error
 
   defp try_listen([{hostname, port} | rest], index) do
-    case :gen_tcp.listen(port, [:binary, packet: 0, active: :false, reuseaddr: true]) do
-      {:ok, socket} ->
-        Logger.info("Listening to port #{port}")
-        {:ok, index, socket}
-      {:error, _error} -> try_listen(rest, index + 1)
+    {:ok, my_hostname} = :inet.gethostname
+
+    if hostname == my_hostname do
+      case :gen_tcp.listen(port, [:binary, packet: 0, active: :false, reuseaddr: true]) do
+        {:ok, socket} ->
+          Logger.info("Listening to port #{port}")
+          {:ok, index, socket}
+        {:error, _error} -> try_listen(rest, index + 1)
+      end
+    else
+      try_listen(rest, index + 1)
     end
   end
 
