@@ -3,16 +3,16 @@ defmodule Server do
   Documentation for Server.
   """
 
-  @doc """
-  Hello world.
+  use Application
+  require Logger
 
-  ## Examples
-
-      iex> Server.hello
-      :world
-
-  """
-  def hello do
-    :world
+  def start(_type, _args) do
+    Logger.info "Started"
+    {:ok, spawn_link(&begin/0)}
   end
+
+  def begin() do
+    nodes_socket = Server.Preamble.start()
+  end
+
 end
