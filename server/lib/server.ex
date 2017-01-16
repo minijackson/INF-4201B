@@ -12,17 +12,8 @@ defmodule Server do
   end
 
   def begin() do
-    nodes_socket = Server.Preamble.start()
-
-    Logger.debug fn ->
-      "Total connected nodes: #{
-        Enum.map(nodes_socket, fn node ->
-          {:ok, {ip, port}} = :inet.peername node
-          {:ok, {:hostent, hostname, _, _, _, _}} = :inet.gethostbyaddr ip
-          "#{hostname}:#{port} "
-        end)
-      }"
-    end
+    {:ok, index, my_socket, nodes_socket} = Server.Preamble.start()
+    Logger.info("Everybody is connected, starting application")
   end
 
 end
