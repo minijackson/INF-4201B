@@ -1,4 +1,8 @@
 defmodule Server.Preamble do
+  @moduledoc """
+  Documentation for Server.Preamble.
+  """
+
 
   require Logger
 
@@ -18,8 +22,8 @@ defmodule Server.Preamble do
 
     Logger.debug fn ->
       "Total connected nodes: #{
-        Enum.map(nodes_socket, fn {index, node} ->
-          {:ok, {ip, port}} = :inet.peername node
+        Enum.map(nodes_socket, fn {index, request_socket, _recv_socket} ->
+          {:ok, {ip, port}} = :inet.peername request_socket
           {:ok, {:hostent, hostname, _, _, _, _}} = :inet.gethostbyaddr ip
           "#{index}: #{hostname}:#{port} "
         end)
@@ -31,7 +35,7 @@ defmodule Server.Preamble do
 
   defp try_listen(nodes, index \\ 0)
 
-  defp try_listen([], index), do: :error
+  defp try_listen([], _index), do: :error
 
   defp try_listen([{hostname, port} | rest], index) do
     {:ok, my_hostname} = :inet.gethostname
@@ -48,32 +52,34 @@ defmodule Server.Preamble do
     end
   end
 
-  defp connect_nodes([], index), do: []
+  defp connect_nodes([], _index), do: []
   defp connect_nodes([node | rest], index) do
-    socket = connect_node(node)
-    [{index, socket} | connect_nodes(rest, index + 1)]
+    {request_socket, recv_socket} = connect_node(node)
+    [{index, request_socket, recv_socket} | connect_nodes(rest, index + 1)]
   end
 
   defp connect_node({address, port}) do
-    {:ok, socket} = :gen_tcp.connect(address, port, [:binary, packet: 0, active: false], 100)
+    {:ok, recv_socket} = :gen_tcp.connect(address, port, [:binary, packet: 0, active: false], 100)
+    {:ok, request_socket} = :gen_tcp.connect(address, port, [:binary, packet: 0, active: false], 100)
     Logger.debug("Connected to #{address}:#{port}")
-    socket
+    {request_socket, recv_socket}
   end
 
-  defp accept_nodes([], my_socket, index), do: []
+  defp accept_nodes([], _my_socket, _index), do: []
   defp accept_nodes([_node | rest], my_socket, index) do
-    socket = accept_node(my_socket)
-    [{index, socket} | accept_nodes(rest, my_socket, index + 1)]
+    {request_socket, recv_socket} = accept_node(my_socket)
+    [{index, request_socket, recv_socket} | accept_nodes(rest, my_socket, index + 1)]
   end
 
   defp accept_node(my_socket) do
-    {:ok, socket} = :gen_tcp.accept(my_socket)
+    {:ok, request_socket} = :gen_tcp.accept(my_socket)
+    {:ok, recv_socket} = :gen_tcp.accept(my_socket)
     Logger.debug(fn ->
-      {:ok, {ip, port}} = :inet.peername socket
+      {:ok, {ip, port}} = :inet.peername request_socket
       {:ok, {:hostent, hostname, _, _, _, _}} = :inet.gethostbyaddr ip
       "Accepted connection: #{hostname}:#{port}"
     end)
-    socket
+    {request_socket, recv_socket}
   end
 
 end
